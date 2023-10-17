@@ -19,7 +19,7 @@ enum ast_node_type {
 };
 
 
-static const char *ant_names[] = {
+static const char *ast_names[] = {
         [COMMON] = "common",
         [EXPR] = "expression",
         [SOURCE] = "source",

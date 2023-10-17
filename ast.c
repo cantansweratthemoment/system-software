@@ -86,7 +86,7 @@ struct ast_node *make_ident_node(char *name) {
 }
 
 void print_node_ident(struct ast_node *node) {
-    printf("\"type: %s, id: %llu", ant_names[node->type], node->id);
+    printf("\"type: %s, id: %llu", ast_names[node->type], node->id);
     switch (node->type) {
         case LOOP: {
             printf(", loop_type: %s\"", node->ast_loop.loop_type);
