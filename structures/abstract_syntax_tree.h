@@ -15,7 +15,8 @@ enum ast_node_type {
     LOOP,
     TYPE_NODE,
     VALUE,
-    IDENTIFIER
+    IDENTIFIER,
+    ASS
 };
 
 
@@ -29,13 +30,19 @@ static const char *ast_names[] = {
         [LOOP] = "loop",
         [TYPE_NODE] = "type",
         [VALUE] = "value",
-        [IDENTIFIER] = "identifier"
+        [IDENTIFIER] = "identifier",
+        [ASS] = "assign"
 };
 
 struct ast_node;
 
 struct ast_expression {
     char oper_name[MAXIMUM_IDENTIFIER_LENGTH];
+    struct ast_node *left;
+    struct ast_node *right;
+};
+
+struct ast_ass {
     struct ast_node *left;
     struct ast_node *right;
 };
@@ -91,6 +98,7 @@ struct ast_node {
     unsigned long long id;
     union {
         struct ast_expression ast_expression;
+        struct ast_ass ast_ass;
         struct ast_source ast_source;
         struct ast_function_signature ast_function_signature;
         struct ast_branch ast_branch;
@@ -104,6 +112,8 @@ struct ast_node {
 };
 
 struct ast_node *make_common_node(char *, struct ast_node *, struct ast_node *);
+
+struct ast_node *make_assigment(struct ast_node *, struct ast_node *);
 
 struct ast_node *make_expr_node(char *, struct ast_node *, struct ast_node *);
 
@@ -124,5 +134,13 @@ struct ast_node *make_type_node(char *);
 struct ast_node *make_ident_node(char *);
 
 void print_ast(struct ast_node *);
+
+typedef void (callback)(struct ast_node *);
+
+void ast_dfs(struct ast_node *, callback, callback);
+
+void free_ast(struct ast_node *);
+
+struct ast_node *build_ast(FILE *filename);
 
 #endif // _AST_H_

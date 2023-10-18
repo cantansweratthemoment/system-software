@@ -1,6 +1,6 @@
 %{
-#include "error.h"
-#include "ast.h"
+#include "structures/error.h"
+#include "structures/abstract_syntax_tree.h"
 #include "grammer.tab.h"
 #include <string.h>
 %}
@@ -178,6 +178,10 @@
 "="                                 {
  return BIN_EQUALS;
  }
+
+":="                                 {
+return ASSIGMENT;
+}
 
 [a-zA-Z_][a-zA-Z_0-9]* {
     yylval.node = make_ident_node(yytext);

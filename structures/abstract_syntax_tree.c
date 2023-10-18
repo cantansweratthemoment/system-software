@@ -1,14 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "ast.h"
+#include "abstract_syntax_tree.h"
 
-unsigned counter = 0;
+extern struct ast_node *root;
+extern FILE *yyin;
+
+extern int yyparse();
+
+unsigned ast_counter = 0;
 
 struct ast_node *make_node(enum ast_node_type type) {
     struct ast_node *node = (struct ast_node *) malloc(sizeof(struct ast_node));
     node->type = type;
-    node->id = counter++;
+    node->id = ast_counter++;
     return node;
 }
 
@@ -34,6 +39,13 @@ struct ast_node *make_loop_node(char *name, struct ast_node *first, struct ast_n
     loop->ast_loop.expression = first;
     loop->ast_loop.statement = second;
     return loop;
+}
+
+struct ast_node *make_assigment(struct ast_node *left, struct ast_node *right) {
+    struct ast_node *ass = make_node(ASS);
+    ass->ast_ass.left = left;
+    ass->ast_ass.right = right;
+    return ass;
 }
 
 struct ast_node *make_block(struct ast_node *node) {
@@ -88,6 +100,14 @@ struct ast_node *make_ident_node(char *name) {
 void print_node_ident(struct ast_node *node) {
     printf("\"type: %s, id: %llu", ast_names[node->type], node->id);
     switch (node->type) {
+        case EXPR: {
+            printf(", oper_name: %s\"", node->ast_expression.oper_name);
+            break;
+        }
+        case ASS: {
+            printf(", oper_name: ASSIGMENT\"");
+            break;
+        }
         case LOOP: {
             printf(", loop_type: %s\"", node->ast_loop.loop_type);
             break;
@@ -117,7 +137,6 @@ void print_node_ident(struct ast_node *node) {
 
 void print_node(struct ast_node *node, unsigned int level) {
     if (node == NULL) return;
-
     switch (node->type) {
         case EXPR: {
             if (node->ast_expression.left) {
@@ -127,13 +146,29 @@ void print_node(struct ast_node *node, unsigned int level) {
                 printf(";\n");
                 print_node(node->ast_expression.left, level + 1);
             }
-
             if (node->ast_expression.right) {
                 print_node_ident(node);
                 printf(" -> ");
                 print_node_ident(node->ast_expression.right);
                 printf(";\n");
                 print_node(node->ast_expression.right, level + 1);
+            }
+            break;
+        }
+        case ASS: {
+            if (node->ast_ass.left) {
+                print_node_ident(node);
+                printf(" -> ");
+                print_node_ident(node->ast_ass.left);
+                printf(";\n");
+                print_node(node->ast_ass.left, level + 1);
+            }
+            if (node->ast_ass.right) {
+                print_node_ident(node);
+                printf(" -> ");
+                print_node_ident(node->ast_ass.right);
+                printf(";\n");
+                print_node(node->ast_ass.right, level + 1);
             }
             break;
         }
@@ -145,7 +180,6 @@ void print_node(struct ast_node *node, unsigned int level) {
                 printf(";\n");
                 print_node(node->ast_source.source, level);
             }
-
             if (node->ast_source.source_item) {
                 print_node_ident(node);
                 printf(" -> ");
@@ -163,7 +197,6 @@ void print_node(struct ast_node *node, unsigned int level) {
                 printf(";\n");
                 print_node(node->ast_function_signature.ident, level + 1);
             }
-
             if (node->ast_function_signature.args) {
                 print_node_ident(node);
                 printf(" -> ");
@@ -171,7 +204,6 @@ void print_node(struct ast_node *node, unsigned int level) {
                 printf(";\n");
                 print_node(node->ast_function_signature.args, level + 1);
             }
-
             if (node->ast_function_signature.type_ref) {
                 print_node_ident(node);
                 printf(" -> ");
@@ -179,7 +211,6 @@ void print_node(struct ast_node *node, unsigned int level) {
                 printf(";\n");
                 print_node(node->ast_function_signature.type_ref, level + 1);
             }
-
             free(node);
             break;
         }
@@ -191,7 +222,6 @@ void print_node(struct ast_node *node, unsigned int level) {
                 printf(";\n");
                 print_node(node->ast_branch.if_expr, level + 1);
             }
-
             if (node->ast_branch.if_statement) {
                 print_node_ident(node);
                 printf(" -> ");
@@ -199,7 +229,6 @@ void print_node(struct ast_node *node, unsigned int level) {
                 printf(";\n");
                 print_node(node->ast_branch.if_statement, level + 1);
             }
-
             if (node->ast_branch.else_statement) {
                 print_node_ident(node);
                 printf(" -> ");
@@ -207,7 +236,6 @@ void print_node(struct ast_node *node, unsigned int level) {
                 printf(";\n");
                 print_node(node->ast_branch.else_statement, level + 1);
             }
-
             free(node);
             break;
         }
@@ -219,7 +247,6 @@ void print_node(struct ast_node *node, unsigned int level) {
                 printf(";\n");
                 print_node(node->ast_block.block_items, level + 1);
             }
-
             free(node);
             break;
         }
@@ -231,7 +258,6 @@ void print_node(struct ast_node *node, unsigned int level) {
                 printf(";\n");
                 print_node(node->ast_loop.statement, level + 1);
             }
-
             if (node->ast_loop.expression) {
                 print_node_ident(node);
                 printf(" -> ");
@@ -239,7 +265,6 @@ void print_node(struct ast_node *node, unsigned int level) {
                 printf(";\n");
                 print_node(node->ast_loop.expression, level + 1);
             }
-
             free(node);
             break;
         }
@@ -251,7 +276,6 @@ void print_node(struct ast_node *node, unsigned int level) {
                 printf(";\n");
                 print_node(node->ast_common.left, level + 1);
             }
-
             if (node->ast_common.right) {
                 print_node_ident(node);
                 printf(" -> ");
@@ -259,7 +283,6 @@ void print_node(struct ast_node *node, unsigned int level) {
                 printf(";\n");
                 print_node(node->ast_common.right, level + 1);
             }
-
             free(node);
             break;
         }
@@ -278,7 +301,67 @@ void print_node(struct ast_node *node, unsigned int level) {
 void print_ast(struct ast_node *node) {
     unsigned int level = 0;
     printf("digraph G {\n");
+    printf("node [shape=egg, fillcolor=pink, style=\"filled\"];\n");
     print_node(node, level);
-    printf(" [shape=Mdiamond];\n");
     printf("}\n");
+}
+
+void ast_dfs(struct ast_node *node, callback preproccess, callback postprocess) {
+    if (node == NULL) return;
+    preproccess(node);
+    switch (node->type) {
+        case EXPR: {
+            ast_dfs(node->ast_expression.left, preproccess, postprocess);
+            ast_dfs(node->ast_expression.right, preproccess, postprocess);
+            break;
+        }
+        case SOURCE: {
+            ast_dfs(node->ast_source.source, preproccess, postprocess);
+            ast_dfs(node->ast_source.source_item, preproccess, postprocess);
+            break;
+        }
+        case FUNC_SIGN: {
+            ast_dfs(node->ast_function_signature.ident, preproccess, postprocess);
+            ast_dfs(node->ast_function_signature.args, preproccess, postprocess);
+            ast_dfs(node->ast_function_signature.type_ref, preproccess, postprocess);
+            break;
+        }
+        case BRANCH: {
+            ast_dfs(node->ast_branch.if_expr, preproccess, postprocess);
+            ast_dfs(node->ast_branch.if_statement, preproccess, postprocess);
+            ast_dfs(node->ast_branch.else_statement, preproccess, postprocess);
+            break;
+        }
+        case BLOCK: {
+            ast_dfs(node->ast_block.block_items, preproccess, postprocess);
+            break;
+        }
+        case LOOP: {
+            ast_dfs(node->ast_loop.statement, preproccess, postprocess);
+            ast_dfs(node->ast_loop.expression, preproccess, postprocess);
+            break;
+        }
+        case COMMON: {
+            ast_dfs(node->ast_common.left, preproccess, postprocess);
+            ast_dfs(node->ast_common.right, preproccess, postprocess);
+            break;
+        }
+        default:
+            break;
+    }
+    postprocess(node);
+}
+
+void do_nothing(struct ast_node *node) {
+    return;
+}
+
+void free_ast(struct ast_node *node) {
+    ast_dfs(node, do_nothing, free_ast);
+}
+
+struct ast_node *build_ast(FILE *filename) {
+    yyin = filename;
+    yyparse();
+    return root;
 }

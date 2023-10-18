@@ -58,29 +58,30 @@
      BIN_PLUS = 274,
      BIN_OR = 275,
      BIN_AND = 276,
-     TRUE = 277,
-     FALSE = 278,
-     STR = 279,
-     CHAR = 280,
-     HEX = 281,
-     BIN = 282,
-     DEC = 283,
-     METHOD = 284,
-     WHILE = 285,
-     REPEAT = 286,
-     DO = 287,
-     BREAK = 288,
-     UNTIL = 289,
-     IF = 290,
-     THEN = 291,
-     ELSE = 292,
-     COLON = 293,
-     SEMICOLON = 294,
-     COMMA = 295,
-     VAR = 296,
-     BEGINING = 297,
-     END = 298,
-     TYPE = 299
+       ASSIGMENT = 277,
+       TRUE = 278,
+       FALSE = 279,
+       STR = 280,
+       CHAR = 281,
+       HEX = 282,
+       BIN = 283,
+       DEC = 284,
+       METHOD = 285,
+       WHILE = 286,
+       REPEAT = 287,
+       DO = 288,
+       BREAK = 289,
+       UNTIL = 290,
+       IF = 291,
+       THEN = 292,
+       ELSE = 293,
+       COLON = 294,
+       SEMICOLON = 295,
+       COMMA = 296,
+       VAR = 297,
+       BEGINING = 298,
+       END = 299,
+       TYPE = 300
    };
 #endif
 /* Tokens.  */
@@ -103,41 +104,42 @@
 #define BIN_PLUS 274
 #define BIN_OR 275
 #define BIN_AND 276
-#define TRUE 277
-#define FALSE 278
-#define STR 279
-#define CHAR 280
-#define HEX 281
-#define BIN 282
-#define DEC 283
-#define METHOD 284
-#define WHILE 285
-#define REPEAT 286
-#define DO 287
-#define BREAK 288
-#define UNTIL 289
-#define IF 290
-#define THEN 291
-#define ELSE 292
-#define COLON 293
-#define SEMICOLON 294
-#define COMMA 295
-#define VAR 296
-#define BEGINING 297
-#define END 298
-#define TYPE 299
+#define ASSIGMENT 277
+#define TRUE 278
+#define FALSE 279
+#define STR 280
+#define CHAR 281
+#define HEX 282
+#define BIN 283
+#define DEC 284
+#define METHOD 285
+#define WHILE 286
+#define REPEAT 287
+#define DO 288
+#define BREAK 289
+#define UNTIL 290
+#define IF 291
+#define THEN 292
+#define ELSE 293
+#define COLON 294
+#define SEMICOLON 295
+#define COMMA 296
+#define VAR 297
+#define BEGINING 298
+#define END 299
+#define TYPE 300
 
 
 
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 14 "grammer.y"
+#line 14 "utils/grammer.y"
 {
   struct ast_node* node;
 }
 /* Line 1529 of yacc.c.  */
-#line 141 "grammer.tab.h"
+#line 143 "grammer.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

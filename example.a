@@ -1,6 +1,5 @@
-method meow(q:int):gav
-    var a,b,c:abobus; d,e:amogus; f:array[] of int;
+method test_method(a:int):test_type
     begin
-        if 100>50 then sosiska(1, l[7]);
-        else a:=6+6+6;
+        while a>10 do a:=7+a;
+        a:=a+6;
     end;

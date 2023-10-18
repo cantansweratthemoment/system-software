@@ -1,25 +1,28 @@
-all: result
+all: clean install
 
 clean:
-	rm -rf *.o result
+	rm -rf *.o spo-ast lex.yy.c grammer.tab.c grammer.tab.h
 
-out:
-	mkdir out
+lex.yy.c: utils/lexer.l
+	flex utils/lexer.l
 
-lex.yy.c: lexer.l
-	flex lexer.l
+error.o: structures/error.c
+	gcc -c -o error.o structures/error.c
 
-error.o: error.c
-	gcc -c -o error.o error.c
+grammer.tab.c: utils/grammer.y
+	bison -d -t utils/grammer.y
 
-grammer.tab.c: grammer.y
-	bison -d -t grammer.y
+ast.o: structures/abstract_syntax_tree.c
+	gcc -c -o ast.o structures/abstract_syntax_tree.c
 
-main.o: main.c out
+list.o: structures/operation_tree.c
+	gcc -c -o list.o structures/operation_tree.c
+
+graph.o: structures/control_flow_graph.c
+	gcc -c -o graph.o structures/control_flow_graph.c
+
+main.o: main.c
 	gcc -c -o main.o main.c
-
-ast.o: ast.c
-	gcc -c -o ast.o ast.c
 
 lex.yy.o: lex.yy.c
 	gcc -c -o lex.yy.o lex.yy.c
@@ -27,8 +30,11 @@ lex.yy.o: lex.yy.c
 grammer.tab.o: grammer.tab.c
 	gcc -c -o grammer.tab.o grammer.tab.c
 
-result: ast.o grammer.tab.o lex.yy.o main.o error.o
-	gcc main.o grammer.tab.o lex.yy.o ast.o error.o -o result && chmod +x result
+install: ast.o graph.o list.o grammer.tab.o lex.yy.o main.o error.o
+	gcc ast.o graph.o list.o  grammer.tab.o lex.yy.o main.o error.o -o spo-ast && chmod +x spo-ast
 
-run: result
-	./result ./example.a | dot -Tsvg > output.svg
+run_ast: install
+	./spo-ast example.a ast | dot -Tsvg > ast.svg
+
+run_cfg: install
+	./spo-ast example.a cfg | dot -Tsvg > cfg.svg

@@ -1,18 +1,19 @@
 #include <stdio.h>
-#include "grammer.tab.h"
-#include "ast.h"
+#include "structures/abstract_syntax_tree.h"
+#include "structures/control_flow_graph.h"
 
-extern int yyparse();
-extern FILE *yyin;
-extern struct ast_node *root;
 
 int main(int argc, char *argv[]) {
     if (argc > 1) {
         FILE *input_file = fopen(argv[1], "r");
         if (input_file) {
-            yyin = input_file;
-            yyparse();
-            print_ast(root);
+            struct ast_node *root = build_ast(input_file);
+            if (strcmp(argv[2], "ast")) {
+                struct cfg_function_list *j = build_cfg(root);
+                print_functions(j);
+            } else {
+                print_ast(root);
+            }
             fclose(input_file);
         } else {
             printf("File can not be open: %s\n", argv[1]);
