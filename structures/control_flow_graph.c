@@ -14,6 +14,7 @@ struct cfg_node *make_cfg_node(enum cfg_node_type type, struct operation_node *o
     node->id = graph_counter++;
     node->type = type;
     node->ot_root = ot;
+    node->visited = false;
     return node;
 }
 
@@ -299,93 +300,69 @@ void print_ot(struct operation_node *node) {
     }
 }
 
-void print_cfg_node(struct cfg_node *node, bool is_new_line, bool is_verbose) {
-    if (node == NULL) return;
-    printf("\"value: %s, id: %llu", node->desciption, node->id);
-    printf(", operation: ");
-    print_ot(node->ot_root);
+void print_cfg_node(struct cfg_node *left, struct cfg_node *right) {
+    if (left == NULL || right == NULL) return;
+    printf("\"value: %s, id: %llu", left->desciption, left->id);
+    printf(", ot: ");
+    print_ot(left->ot_root);
     printf("\"");
-    if (is_new_line) {
-        printf(";\n");
-    }
-    if (is_verbose) {
-        switch (node->type) {
-            case COMMON_CFG: {
-                break;
-            }
-            case CONDITION_CFG: {
-                struct cfg_node *current = node->cfg_condition.then_block;
-                printf("\"value: %s, id: %llu", node->desciption, node->id);
-                printf(", operation: ");
-                print_ot(node->ot_root);
-                printf("\"");
-                while (current != NULL) {
-                    printf(" -> ");
-                    print_cfg_node(current, true, true);
-                    if (current->next != NULL) {
-                        print_cfg_node(current, false, true);
-                    }
-                    current = current->next;
+    printf(" -> ");
+    printf("\"value: %s, id: %llu", right->desciption, right->id);
+    printf(", ot: ");
+    print_ot(right->ot_root);
+    printf("\";\n");
+
+}
+
+void dfs_cfg_print(struct cfg_node *node) {
+    if (node == NULL) return;
+    node->visited = true;
+    switch (node->type) {
+        case COMMON_CFG: {
+            if (node->next != NULL) {
+                print_cfg_node(node, node->next);
+                if (!node->next->visited) {
+                    dfs_cfg_print(node->next);
                 }
-                current = node->cfg_condition.else_block;
-                if (current != NULL) {
-                    printf("\"value: %s, id: %llu", node->desciption, node->id);
-                    printf(", operation: ");
-                    print_ot(node->ot_root);
-                    printf("\"");
-                }
-                while (current != NULL) {
-                    printf(" -> ");
-                    print_cfg_node(current, true, true);
-                    if (current->next != NULL) {
-                        print_cfg_node(current, false, true);
-                    }
-                    current = current->next;
-                }
-                break;
             }
-            case LOOP_CFG: {
-                struct cfg_node *current = node->cfg_loop.next_body;
-                printf("\"value: %s, id: %llu", node->desciption, node->id);
-                printf(", operation: ");
-                print_ot(node->ot_root);
-                printf("\"");
-                while (current != NULL && current != node) {
-                    printf(" -> ");
-                    print_cfg_node(current, true, true);
-                    if (current->next != NULL) {
-                        print_cfg_node(current, false, true);
-                    }
-                    if (current->next == node) {
-                        printf(" -> ");
-                        printf("\"value: %s, id: %llu", node->desciption, node->id);
-                        printf(", operation: ");
-                        print_ot(node->ot_root);
-                        printf("\"");
-                        printf(";\n");
-                    }
-                    current = current->next;
-                }
-                break;
-            }
-            default: {
-                break;
-            }
+            break;
         }
+        case CONDITION_CFG: {
+            if (node->cfg_condition.then_block != NULL) {
+                print_cfg_node(node, node->cfg_condition.then_block);
+                if (!node->cfg_condition.then_block->visited) {
+                    dfs_cfg_print(node->cfg_condition.then_block);
+                }
+            }
+
+            if (node->cfg_condition.else_block != NULL) {
+                print_cfg_node(node, node->cfg_condition.else_block);
+                if (!node->cfg_condition.else_block->visited) {
+                    dfs_cfg_print(node->cfg_condition.else_block);
+                }
+            }
+            break;
+        }
+        case LOOP_CFG: {
+            if (node->cfg_loop.next_body != NULL) {
+                print_cfg_node(node, node->cfg_loop.next_body);
+                if (!node->cfg_loop.next_body->visited) {
+                    dfs_cfg_print(node->cfg_loop.next_body);
+                }
+            }
+            if (node->next != NULL) {
+                print_cfg_node(node, node->next);
+                if (!node->next->visited) {
+                    dfs_cfg_print(node->next);
+                }
+            }
+            break;
+        }
+        default:
+            break;
     }
 }
 
-void print_cfg(struct cfg_node *root) {
-    struct cfg_node *current = root;
-    while (current != NULL) {
-        if (current->next != NULL) {
-            print_cfg_node(current, false, false);
-            printf(" -> ");
-            print_cfg_node(current->next, true, true);
-        }
-        current = current->next;
-    }
-}
 
 void print_functions(struct cfg_function_list *list) {
     struct cfg_function *current = list->list_root;
@@ -396,7 +373,7 @@ void print_functions(struct cfg_function_list *list) {
         printf("%d", sub_id++);
         printf(" {\n");
         printf("node [shape=egg, fillcolor=aquamarine, style=\"filled\"];\n");
-        print_cfg(current->root_node);
+        dfs_cfg_print(current->root_node);
         printf("}\n");
         current = current->next;
     }

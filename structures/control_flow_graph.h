@@ -6,17 +6,14 @@
 #include "abstract_syntax_tree.h"
 
 enum cfg_node_type {
-    COMMON_CFG,
     LOOP_CFG,
     CONDITION_CFG
-};
-
-struct cfg_common {
 };
 
 struct cfg_loop {
     struct cfg_node *next_body;
     struct cfg_node *end;
+    bool visited;
 };
 
 struct cfg_condition {
@@ -30,8 +27,8 @@ struct cfg_node {
     unsigned long long id;
     struct cfg_node *next;
     struct operation_node *ot_root;
+    bool visited;
     union {
-        struct cfg_common cfg_common;
         struct cfg_loop cfg_loop;
         struct cfg_condition cfg_condition;
     };

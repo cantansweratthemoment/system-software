@@ -1,5 +1,13 @@
-method test_method(a:int):test_type
+method amongas(a:int):amogus_type
     begin
-        while a>10 do a:=7+a;
         a:=a+6;
+        if a>10 then a:=a*2;
+        else a:=a*3;
+        while a>10 do
+         begin
+            a:=2+3;
+         end;
+        if a<10 then a:=a*2;
+        else a:=a*3;
+        x:=7;
     end;

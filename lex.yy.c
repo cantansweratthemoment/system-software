@@ -541,7 +541,6 @@ int yy_flex_debug = 0;
 char *yytext;
 #line 1 "utils/lexer.l"
 #line 2 "utils/lexer.l"
-
 #include "structures/error.h"
 #include "structures/abstract_syntax_tree.h"
 #include "grammer.tab.h"
@@ -799,7 +798,7 @@ yy_match:
 				}
 			yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
 			++yy_cp;
-			} while (yy_base[yy_current_state] != 189);
+            } while (yy_base[yy_current_state] != 189);
 
 yy_find_action:
 		yy_act = yy_accept[yy_current_state];
