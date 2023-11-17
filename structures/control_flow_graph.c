@@ -48,6 +48,7 @@ struct cfg_function *create_new_function(char *ident, struct cfg_node *root, str
     strncpy(function->function_name, ident, MAXIMUM_IDENTIFIER_LENGTH);
     function->root_node = root;
     function->next = next;
+    function->scope = create_scope(ident);
     return function;
 }
 
@@ -102,7 +103,8 @@ struct cfg_node *ast_dfs_cfg(struct cfg_node *,
                              struct ast_node *,
                              struct cfg_function_list *,
                              struct cfg_function *,
-                             bool is_in_block);
+                             bool is_in_block,
+                             bool);
 
 void connect_next(struct cfg_node *last, struct cfg_node *current) {
     if (last == NULL) return;
@@ -132,7 +134,7 @@ void connect_next(struct cfg_node *last, struct cfg_node *current) {
             }
             find_last_in_then(last)->next = current;
             find_last_in_else(last)->next = current;
-            last->next = NULL;
+            last->next = current;
             break;
         }
         default:
@@ -154,15 +156,15 @@ struct cfg_node *process_common_ast_node(struct cfg_node *cfg_node,
                                                      current->ast_common.right,
                                                      list,
                                                      current_function,
-                                                     true);
+                                                     true, true);
             connect_next(cfg_node_c, statement);
             cfg_node_c = statement;
             current = left;
         } while (current != NULL);
 
     } else {
-        ast_dfs_cfg(cfg_node, node->ast_common.left, list, current_function, false);
-        ast_dfs_cfg(cfg_node, node->ast_common.right, list, current_function, false);
+        ast_dfs_cfg(cfg_node, node->ast_common.left, list, current_function, false, true);
+        ast_dfs_cfg(cfg_node, node->ast_common.right, list, current_function, false, true);
     }
 }
 
@@ -170,28 +172,72 @@ struct operation_node *create_ot(char *oper, struct ast_node *node) {
     if (node == NULL) return NULL;
     switch (node->type) {
         case EXPR: {
-            struct operation_node *left = create_ot("READ", node->ast_expression.left);
-            struct operation_node *right = create_ot("READ", node->ast_expression.right);
-            return create_operation_node(node->ast_expression.oper_name, left, right);
+            struct operation_node *left;
+            struct operation_node *right;
+            if (!strcmp(node->ast_expression.oper_name, "rb")) {
+                left = create_ot("WRITE_IDENT", node->ast_expression.left);
+                right = create_ot("", node->ast_expression.right);
+            } else if (!strcmp(node->ast_expression.oper_name, "wb")) {
+                left = create_ot("READ_IDENT", node->ast_expression.left);
+                right = create_ot("", node->ast_expression.right);
+            } else {
+                left = create_ot("", node->ast_expression.left);
+                right = create_ot("", node->ast_expression.right);
+            }
+            bool v1 = false;
+            bool v2 = false;
+            if (node->ast_expression.right && node->ast_expression.right->type == IDENTIFIER) v2 = true;
+            if (node->ast_expression.left && node->ast_expression.left->type == IDENTIFIER) v1 = true;
+            return create_operation_node(node->ast_expression.oper_name, left, right, v1, v2, true, false);
         }
         case ASS: {
-            struct operation_node *left = create_ot("WRITE", node->ast_ass.left);
+            struct operation_node *left = create_ot("WRITE_IDENT", node->ast_ass.left);
             struct operation_node *right = create_ot("READ", node->ast_ass.right);
-            return create_operation_node("NULL", left, right);
+            bool v2 = false;
+            if (node->ast_ass.right->type == IDENTIFIER) v2 = true;
+            return create_operation_node("ASSIGMENT", right, left, true, v2, true, false);
         }
         case IDENTIFIER: {
-            return create_operation_node_leaf(oper, node->ast_identifier.name, NULL);
+            if (!strcmp(oper, "WRITE_IDENT")) {
+                return create_operation_node_leaf(oper, node->ast_identifier.name, NULL, true, NULL);
+            }
+            if (!strcmp(oper, "READ_FNC")) {
+                return create_operation_node_leaf("READ_FNC", node->ast_identifier.name, NULL, false, NULL);
+            }
+            return create_operation_node_leaf("READ_IDENT", node->ast_identifier.name, NULL, true, NULL);
         }
         case VALUE: {
-            return create_operation_node_leaf("NULL", node->ast_value.value, NULL);
+            return create_operation_node_leaf("PUSH_VLE", node->ast_value.value, NULL, false, NULL);
         }
         case COMMON: {
-            struct operation_node *left = create_ot("READ", node->ast_common.left);
-            struct operation_node *right = NULL;
-            if (node->ast_common.right != NULL) {
-                right = create_ot("READ", node->ast_common.right);
+            if (!strcmp(node->ast_common.node_name, "indexer")) {
+                struct operation_node *left = create_ot("READ", node->ast_common.left);
+                struct operation_node *right = create_ot("READ", node->ast_common.right);
+                bool v2 = false;
+                if (node->ast_common.right
+                    && node->ast_common.right->ast_common.left
+                    && node->ast_common.right->ast_common.left->type == IDENTIFIER)
+                    v2 = true;
+                if (!strcmp(oper, "WRITE_IDENT")) {
+                    return create_operation_node("WRITE_BY_ADDRESS", left, right, true, v2, false, true);
+                }
+                return create_operation_node("READ_BY_ADDRESS", left, right, true, v2, false, true);
+            } else if (node->ast_common.left->type == VALUE) {
+                return create_ot("", node->ast_common.left);
+            } else if (strcmp(node->ast_common.node_name, "call_list") && node->ast_common.left->type == IDENTIFIER) {
+                return create_ot("", node->ast_common.left);
+            } else {
+                struct operation_node *left = create_ot("READ_IDENT", node->ast_common.left);
+                struct operation_node *right = NULL;
+                if (node->ast_common.right != NULL) {
+                    right = create_ot("READ", node->ast_common.right);
+                }
+                bool v1 = false;
+                bool v2 = false;
+                if (node->ast_common.right && node->ast_common.right->type == IDENTIFIER) v2 = true;
+                if (node->ast_common.left && node->ast_common.left->type == IDENTIFIER) v1 = true;
+                return create_operation_node("READ_LIST", left, right, v1, v2, true, false);
             }
-            return create_operation_node("READ_LIST", left, right);
         }
         default:
             break;
@@ -202,15 +248,26 @@ struct cfg_node *ast_dfs_cfg(struct cfg_node *cfg_node,
                              struct ast_node *node,
                              struct cfg_function_list *list,
                              struct cfg_function *current_function,
-                             bool is_in_block) {
+                             bool is_in_block,
+                             bool need_connect) {
     if (node == NULL) return NULL;
     struct cfg_node *cfg_node_next = NULL;
     switch (node->type) {
         case EXPR: {
             struct operation_node *node2 = create_ot(NULL, node);
             cfg_node_next = make_common_cfg_node("expression", NULL, node2);
-            if (!is_in_block) {
+            if (!is_in_block && need_connect) {
                 connect_next(cfg_node, cfg_node_next);
+            }
+            if (node->ast_expression.right && node->ast_expression.right->type == COMMON) {
+                if (!strcmp(node->ast_expression.right->ast_common.node_name, "indexer")) {
+                    ast_dfs_cfg(cfg_node, node->ast_expression.right, list, current_function, false, true);
+                }
+            }
+            if (node->ast_expression.left && node->ast_expression.left->type == COMMON) {
+                if (!strcmp(node->ast_expression.left->ast_common.node_name, "indexer")) {
+                    ast_dfs_cfg(cfg_node, node->ast_expression.left, list, current_function, false, true);
+                }
             }
             break;
         }
@@ -220,11 +277,21 @@ struct cfg_node *ast_dfs_cfg(struct cfg_node *cfg_node,
             if (!is_in_block) {
                 connect_next(cfg_node, cfg_node_next);
             }
+            if (node->ast_ass.right->type == COMMON) {
+                if (!strcmp(node->ast_ass.right->ast_common.node_name, "indexer")) {
+                    ast_dfs_cfg(cfg_node, node->ast_ass.right, list, current_function, false, true);
+                }
+            }
+            if (node->ast_ass.left->type == COMMON) {
+                if (!strcmp(node->ast_ass.left->ast_common.node_name, "indexer")) {
+                    ast_dfs_cfg(cfg_node, node->ast_ass.left, list, current_function, false, true);
+                }
+            }
             break;
         }
         case SOURCE: {
-            ast_dfs_cfg(cfg_node, node->ast_source.source, list, current_function, false);
-            ast_dfs_cfg(cfg_node, node->ast_source.source_item, list, current_function, false);
+            ast_dfs_cfg(cfg_node, node->ast_source.source, list, current_function, false, true);
+            ast_dfs_cfg(cfg_node, node->ast_source.source_item, list, current_function, false, true);
             break;
         }
         case BRANCH: {
@@ -232,13 +299,13 @@ struct cfg_node *ast_dfs_cfg(struct cfg_node *cfg_node,
             if (!is_in_block) {
                 connect_next(cfg_node, cfg_node_next);
             }
-            ast_dfs_cfg(cfg_node_next, node->ast_branch.if_statement, list, current_function, false);
-            ast_dfs_cfg(cfg_node_next, node->ast_branch.else_statement, list, current_function, false);
+            ast_dfs_cfg(cfg_node_next, node->ast_branch.if_statement, list, current_function, false, true);
+            ast_dfs_cfg(cfg_node_next, node->ast_branch.else_statement, list, current_function, false, true);
             cfg_node_next->ot_root = create_ot(NULL, node->ast_branch.if_expr);
             break;
         }
         case BLOCK: {
-            ast_dfs_cfg(cfg_node, node->ast_block.block_items, list, current_function, false);
+            ast_dfs_cfg(cfg_node, node->ast_block.block_items, list, current_function, false, true);
             break;
         }
         case LOOP: {
@@ -247,24 +314,23 @@ struct cfg_node *ast_dfs_cfg(struct cfg_node *cfg_node,
                 connect_next(cfg_node, cfg_node_next);
             }
             ast_dfs_cfg(cfg_node_next, node->ast_loop.statement, list, current_function,
-                        false);
+                        false, true);
             struct cfg_node *expression = ast_dfs_cfg(cfg_node_next, node->ast_loop.expression, list, current_function,
-                                                      false);
+                                                      false, false);
             cfg_node_next->ot_root = expression->ot_root;
             break;
         }
         case COMMON: {
-            if (strcmp(node->ast_common.node_name, "source_item")) {
-                process_common_ast_node(cfg_node, node, list, current_function);
-            } else {
-                cfg_node_next = make_common_cfg_node("start", NULL, NULL);
-                struct cfg_function *function = create_new_function(node->ast_common.left
-                                                                            ->ast_function_signature.ident
-                                                                            ->ast_identifier.name, cfg_node_next, NULL);
-                list_push(list, function);
-                ast_dfs_cfg(cfg_node_next, node->ast_common.right, list, function, false);
-                break;
+            if (!strcmp(node->ast_common.node_name, "list_var")) {
+                struct variable_list_node *variable_s = create_new_variable(node->ast_common.left->ast_identifier.name,
+                                                                            LONG,
+                                                                            current_function->scope->offset_counter,
+                                                                            NULL);
+
+                v_list_push(current_function->scope->list, variable_s);
+                current_function->scope->offset_counter++;
             }
+            process_common_ast_node(cfg_node, node, list, current_function);
             break;
         }
         default:
@@ -276,23 +342,24 @@ struct cfg_node *ast_dfs_cfg(struct cfg_node *cfg_node,
 
 struct cfg_function_list *build_cfg(struct ast_node *root) {
     struct cfg_function_list *list = create_function_list(NULL);
-    ast_dfs_cfg(NULL, root, list, NULL, false);
+    ast_dfs_cfg(NULL, root, list, NULL, false, true);
     return list;
 }
 
 
 void print_ot(struct operation_node *node) {
     if (node == NULL) return;
+    if (strcmp(node->type, "NULL")) {
+        printf(" %s ", node->type);
+    }
     if (!node->is_left) {
         printf("%s", node->left_operand);
     } else {
         print_ot(node->left_next);
     }
-
     if (strcmp(node->type, "NULL")) {
         printf(" %s ", node->type);
     }
-
     if (!node->is_right) {
         printf("%s", node->right_operand);
     } else {
@@ -364,7 +431,7 @@ void dfs_cfg_print(struct cfg_node *node) {
 }
 
 
-void print_functions(struct cfg_function_list *list) {
+void print_functions(struct cfg_function_list *list, bool need) {
     struct cfg_function *current = list->list_root;
     printf("digraph G {\n");
     int sub_id = 1;

@@ -1,19 +1,23 @@
 #include <stdio.h>
 #include "structures/abstract_syntax_tree.h"
 #include "structures/control_flow_graph.h"
+#include <time.h>
+#include <stdlib.h>
 
+extern int yyparse();
+
+extern FILE *yyin;
+extern struct ast_node *root;
 
 int main(int argc, char *argv[]) {
-    if (argc > 1) {
-        FILE *input_file = fopen(argv[1], "r");
+    srand(time(NULL));
+    if (argc > 0) {
+        FILE *input_file = fopen("../test.pas", "r");
         if (input_file) {
-            struct ast_node *root = build_ast(input_file);
-            if (strcmp(argv[2], "ast")) {
-                struct cfg_function_list *j = build_cfg(root);
-                print_functions(j);
-            } else {
-                print_ast(root);
-            }
+            yyin = input_file;
+            yyparse();
+            struct cfg_function_list *j = build_cfg(root);
+            print_functions(j, false);
             fclose(input_file);
         } else {
             printf("File can not be open: %s\n", argv[1]);

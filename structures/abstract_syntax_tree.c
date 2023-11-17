@@ -3,11 +3,6 @@
 #include <string.h>
 #include "abstract_syntax_tree.h"
 
-extern struct ast_node *root;
-extern FILE *yyin;
-
-extern int yyparse();
-
 unsigned ast_counter = 0;
 
 struct ast_node *make_node(enum ast_node_type type) {
@@ -358,10 +353,4 @@ void do_nothing(struct ast_node *node) {
 
 void free_ast(struct ast_node *node) {
     ast_dfs(node, do_nothing, free_ast);
-}
-
-struct ast_node *build_ast(FILE *filename) {
-    yyin = filename;
-    yyparse();
-    return root;
 }

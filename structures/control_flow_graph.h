@@ -4,8 +4,10 @@
 
 #include "operation_tree.h"
 #include "abstract_syntax_tree.h"
+#include "processor.h"
 
 enum cfg_node_type {
+    COMMON_CFG,
     LOOP_CFG,
     CONDITION_CFG
 };
@@ -38,6 +40,7 @@ struct cfg_function {
     char function_name[MAXIMUM_IDENTIFIER_LENGTH];
     struct cfg_node *root_node;
     struct cfg_function *next;
+    struct scope *scope;
 };
 
 struct cfg_function_list {
@@ -51,7 +54,7 @@ struct cfg_node *make_loop_cfg_node(char *, struct cfg_node *, struct cfg_node *
 
 struct cfg_node *make_condition_cfg_node(char *, struct cfg_node *, struct cfg_node *, struct operation_node *);
 
-struct cfg_function *create_new_function(char *, struct cfg_node *, struct cfg_function *);
+struct cfg_function *create_new_function(char *, struct cfg_node *, struct cfg_function *m);
 
 struct cfg_function_list *create_function_list(struct cfg_function *);
 
@@ -59,6 +62,6 @@ void list_push(struct cfg_function_list *, struct cfg_function *);
 
 struct cfg_function_list *build_cfg(struct ast_node *);
 
-void print_functions(struct cfg_function_list *);
+void print_functions(struct cfg_function_list *, bool need);
 
 #endif //SYSTEM_SOFTWARE_CONTROL_FLOW_GRAPH_H

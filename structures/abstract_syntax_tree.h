@@ -141,6 +141,4 @@ void ast_dfs(struct ast_node *, callback, callback);
 
 void free_ast(struct ast_node *);
 
-struct ast_node *build_ast(FILE *filename);
-
-#endif // _AST_H_
+#endif

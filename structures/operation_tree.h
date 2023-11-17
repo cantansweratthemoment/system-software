@@ -13,6 +13,10 @@ struct operation_node {
     char type[MAXIMUM_IDENTIFIER_LENGTH];
     bool is_left;
     bool is_right;
+    bool is_variable_left;
+    bool is_variable_right;
+    bool is_expression;
+    bool is_need_to_addr;
     union {
         char left_operand[MAXIMUM_IDENTIFIER_LENGTH];
         struct operation_node *left_next;
@@ -23,8 +27,9 @@ struct operation_node {
     };
 };
 
-struct operation_node *create_operation_node(char *, struct operation_node *, struct operation_node *);
+struct operation_node *
+create_operation_node(char *, struct operation_node *, struct operation_node *, bool, bool, bool, bool);
 
-struct operation_node *create_operation_node_leaf(char *, char *, char *);
+struct operation_node *create_operation_node_leaf(char *, char *, char *, bool, bool);
 
 #endif //SYSTEM_SOFTWARE_OPERATION_TREE_H
